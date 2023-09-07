@@ -1,0 +1,114 @@
+name: Integration tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - converted_to_draft
+      - ready_for_review
+      - labeled
+      - unlabeled
+      - auto_merge_enabled
+      - auto_merge_disabled
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre_check:
+    uses: ./.github/workflows/pre-check-integration.yml
+
+  matrix-test:
+    needs: pre_check
+    if: needs.pre_check.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variation: [one, two]
+    timeout-minutes: 5
+    steps:
+      - name: Get the behavior from the PR description
+        id: get-behavior
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            let behavior = '{}';
+            if (context.payload.pull_request) {
+              const { body } = context.payload.pull_request;
+              const regex = /^\#matrix-test-${{ matrix.variation }}:\s+(\S+)/m;
+              const result = regex.exec(body);
+              if (result) {
+                behavior = result[1];
+              }
+            }
+            console.log(behavior);
+            return behavior;
+
+      - name: run matrix test
+        run: |
+          sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 60 }}
+          exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
+        continue-on-error: ${{ matrix.variation == 'two' }}
+
+  standalone-test:
+    needs: pre_check
+    if: >-
+      needs.pre_check.outputs.should_run == 'true' &&
+      (
+        github.event_name != 'pull_request' ||
+        !contains(github.event.pull_request.labels.*.name, 'skip:standalone')
+      )
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get the behavior from the PR description
+        id: get-behavior
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            let behavior = '{}';
+            if (context.payload.pull_request) {
+              const { body } = context.payload.pull_request;
+              const regex = /^\#standalone-test:\s+(\S+)/m;
+              const result = regex.exec(body);
+              if (result) {
+                behavior = result[1];
+              }
+            }
+            console.log(behavior);
+            return behavior;
+
+      - name: run standalone test
+        run: |
+          sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 45 }}
+          exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
+
+  integration-test-result:
+    needs:
+      - pre_check
+      - matrix-test
+      - standalone-test
+    if: (needs.pre_check.outputs.should_run == 'true' && (success() || failure() || cancelled())) || needs.pre_check.outputs.previous_success == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        shell: bash
+        run: |
+          cat <<EOF
+            needs ${{ toJSON(needs) }}
+          EOF
+          [ "${{ needs.pre_check.outputs.previous_success }}" = "true" ] && exit 0
+          [ "${{ needs.matrix-test.result }}" = "success" ] || exit 1
+          [ "${{ needs.standalone-test.result }}" = "success" ] || exit 1
