@@ -24,7 +24,7 @@ jobs:
             let behavior = '{}';
             if (context.payload.pull_request) {
               const { body } = context.payload.pull_request;
-              const regex = /^\#normal-test:\s+(\S+)/m;
+              const regex = /^\#normal-test:\s+(.*)$/m;
               const result = regex.exec(body);
               if (result) {
                 behavior = result[1];
