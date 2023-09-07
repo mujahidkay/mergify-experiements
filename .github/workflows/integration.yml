@@ -45,7 +45,7 @@ jobs:
             let behavior = '{}';
             if (context.payload.pull_request) {
               const { body } = context.payload.pull_request;
-              const regex = /^\#matrix-test-${{ matrix.variation }}:\s+(\S+)/m;
+              const regex = /^\#matrix-test-${{ matrix.variation }}:\s+(.*)$/m;
               const result = regex.exec(body);
               if (result) {
                 behavior = result[1];
@@ -81,7 +81,7 @@ jobs:
             let behavior = '{}';
             if (context.payload.pull_request) {
               const { body } = context.payload.pull_request;
-              const regex = /^\#standalone-test:\s+(\S+)/m;
+              const regex = /^\#standalone-test:\s+(.*)$/m;
               const result = regex.exec(body);
               if (result) {
                 behavior = result[1];
