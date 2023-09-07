@@ -35,5 +35,5 @@ jobs:
 
       - name: run normal test
         run: |
-          sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 45 }}
+          sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 15 }}
           exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
