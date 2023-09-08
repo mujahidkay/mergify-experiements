@@ -36,23 +36,33 @@ jobs:
         variation: [one, two]
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v3
+      - name: Recreate integration-test-result if needed
+        id: get-pending-integration-result
+        uses: ./.github/actions/get-latest-check
+        with:
+          create-if-needed: true
       - name: Get the behavior from the PR description
         id: get-behavior
         uses: actions/github-script@v6
         with:
           result-encoding: string
           script: |
-            let behavior = '{}';
+            let behavior = {};
             if (context.payload.pull_request) {
               const { body } = context.payload.pull_request;
+              core.debug(`body: ${body}`)
               const regex = /^\#matrix-test-${{ matrix.variation }}:\s+(.*)$/m;
               const result = regex.exec(body);
+              core.debug(`regex result: ${result}`)
               if (result) {
-                behavior = result[1];
+                behavior = JSON.parse(result[1]);
               }
+              const attempt = behavior.attempts && behavior.attempts[${{ github.run_attempt }} - 1] || {}
+              behavior = {...behavior, ...attempt}
             }
             console.log(behavior);
-            return behavior;
+            return JSON.stringify(behavior);
 
       - name: run matrix test
         run: |
@@ -72,23 +82,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v3
+      - name: Recreate integration-test-result if needed
+        id: get-pending-integration-result
+        uses: ./.github/actions/get-latest-check
+        with:
+          create-if-needed: true
       - name: Get the behavior from the PR description
         id: get-behavior
         uses: actions/github-script@v6
         with:
           result-encoding: string
           script: |
-            let behavior = '{}';
+            let behavior = {};
             if (context.payload.pull_request) {
               const { body } = context.payload.pull_request;
+              core.debug(`body: ${body}`)
               const regex = /^\#standalone-test:\s+(.*)$/m;
               const result = regex.exec(body);
+              core.debug(`regex result: ${result}`)
               if (result) {
-                behavior = result[1];
+                behavior = JSON.parse(result[1]);
               }
+              const attempt = behavior.attempts && behavior.attempts[${{ github.run_attempt }} - 1] || {}
+              behavior = {...behavior, ...attempt}
             }
             console.log(behavior);
-            return behavior;
+            return JSON.stringify(behavior);
 
       - name: run standalone test
         run: |
