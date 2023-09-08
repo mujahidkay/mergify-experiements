@@ -36,6 +36,12 @@ jobs:
         variation: [one, two]
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v3
+      - name: Recreate integration-test-result if needed
+        id: get-pending-integration-result
+        uses: ./.github/actions/get-latest-check
+        with:
+          create-if-needed: true
       - name: Get the behavior from the PR description
         id: get-behavior
         uses: actions/github-script@v6
@@ -76,6 +82,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v3
+      - name: Recreate integration-test-result if needed
+        id: get-pending-integration-result
+        uses: ./.github/actions/get-latest-check
+        with:
+          create-if-needed: true
       - name: Get the behavior from the PR description
         id: get-behavior
         uses: actions/github-script@v6
