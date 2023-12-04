@@ -18,6 +18,12 @@ on:
       - auto_merge_disabled
   merge_group:
 
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  statuses: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
