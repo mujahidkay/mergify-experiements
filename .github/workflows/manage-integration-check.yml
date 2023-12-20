@@ -1,0 +1,43 @@
+name: Manage integration check
+
+on:
+  workflow_run:
+    workflows: ["Integration tests"]
+
+jobs:
+  manage-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manage check
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const head_sha = context.workflow_run.head_sha;
+            const runId = context.workflow_run.id;
+            switch (github.context.payload.action) {
+              case "requested":
+              case "in_progress":
+                // Create a check run
+                const check = await github.rest.checks.create({
+                  ...context.repo,
+                  head_sha,
+                  name: "integration-test-result",
+                  status: "in_progress",
+                  output: {
+                    title: "Integration Test Aggregate Result",
+                    summary: `Synthetic check capturing the result of the <a href="${context.workflow_run.html_url}">integration-test workflow run</a>`,
+                  }
+                });
+                break;
+              case "completed":
+                // Update the check run
+                await github.checks.update({
+                  ...context.repo
+                  check_run_id: runId,
+                  status: "completed",
+                  conclusion: github.event.workflow_run.conclusion,
+                });
+                break;
+              default:
+                throw new Error(`Unknown action: ${github.context.payload.action}`);
+            }
