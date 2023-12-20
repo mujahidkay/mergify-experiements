@@ -14,12 +14,6 @@ on:
       - auto_merge_disabled
   merge_group:
 
-permissions:
-  actions: read
-  checks: write
-  contents: read
-  statuses: read
-
 jobs:
   wait-integration-pre-checks:
     runs-on: ubuntu-latest
