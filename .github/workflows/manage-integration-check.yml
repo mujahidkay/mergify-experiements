@@ -29,19 +29,30 @@ jobs:
             });
             return check.data.id;
   update-check:
-    needs: [create-check]
     runs-on: ubuntu-latest
     steps:
       - name: Update check result
         uses: actions/github-script@v6
-        if: ${{ github.context.payload.action == 'completed' }}
+        if: ${{ always() && github.context.payload.action == 'completed' }}
         with:
           script: |
             // Update the check run
-            const checkId = ${{ needs.create-check.outputs.check_id }};
+            const head_sha = context.payload.workflow_run.head_sha;
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+              ...context.repo,
+              ref: head_sha,
+              check_name: "integration-test-result",
+            })
+            core.debug(`integration-test-result check runs: ${JSON.stringify(runs, null, 2)}`);
+            const checkId = runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at))[0];
+
+            if (!checkId) {
+              core.setFailed(`No integration-test-result check found for commit ${head_sha}`);
+              return;
+            }
             await github.checks.update({
               ...context.repo
               check_run_id: checkId,
               status: "completed",
-              conclusion: github.event.workflow_run.conclusion,
+              conclusion: context.payload.workflow_run.conclusion,
             });
