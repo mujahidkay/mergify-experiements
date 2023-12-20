@@ -5,39 +5,43 @@ on:
     workflows: ["Integration tests"]
 
 jobs:
-  manage-check:
+  create-check:
     runs-on: ubuntu-latest
+    outputs:
+      check_id: ${{ steps.create-check.outputs.result }}
     steps:
-      - name: Manage check
+      - name: Create check
         uses: actions/github-script@v6
+        id: create-check
+        if: ${{ github.context.payload.action == 'requested' || github.context.payload.action == 'in_progress' }}
         with:
           script: |
             const head_sha = context.payload.workflow_run.head_sha;
-            const runId = context.payload.workflow_run.id;
-            switch (context.payload.action) {
-              case "requested":
-              case "in_progress":
-                // Create a check run
-                const check = await github.rest.checks.create({
-                  ...context.repo,
-                  head_sha,
-                  name: "integration-test-result",
-                  status: "in_progress",
-                  output: {
-                    title: "Integration Test Aggregate Result",
-                    summary: `Synthetic check capturing the result of the <a href="${context.payload.workflow_run.html_url}">integration-test workflow run</a>`,
-                  }
-                });
-                break;
-              case "completed":
-                // Update the check run
-                await github.rest.checks.update({
-                  ...context.repo,
-                  check_run_id: runId,
-                  status: "completed",
-                  conclusion: context.payload.workflow_run.conclusion,
-                });
-                break;
-              default:
-                throw new Error(`Unknown action: ${context.payload.action}`);
-            }
+            const check = await github.rest.checks.create({
+              ...context.repo,
+              head_sha,
+              name: "integration-test-result",
+              status: "in_progress",
+              output: {
+                title: "Integration Test Aggregate Result",
+                summary: `Synthetic check capturing the result of the <a href="${context.workflow_run.html_url}">integration-test workflow run</a>`,
+              }
+            });
+            return check.data.id;
+  update-check:
+    needs: [create-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update check result
+        uses: actions/github-script@v6
+        if: ${{ github.context.payload.action == 'completed' }}
+        with:
+          script: |
+            // Update the check run
+            const checkId = ${{ needs.create-check.outputs.check_id }};
+            await github.checks.update({
+              ...context.repo
+              check_run_id: checkId,
+              status: "completed",
+              conclusion: github.event.workflow_run.conclusion,
+            });
