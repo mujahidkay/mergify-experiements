@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Update check result
         uses: actions/github-script@v6
-        if: ${{ always() && github.context.payload.action == 'completed' }}
+        if: ${{ github.context.payload.action == 'completed' }}
         with:
           script: |
             // Update the check run
