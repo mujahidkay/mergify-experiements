@@ -13,7 +13,7 @@ jobs:
       - name: Create check
         uses: actions/github-script@v6
         id: create-check
-        if: ${{ context.payload.action == 'requested' || context.payload.action == 'in_progress' }}
+        if: ${{ github.event.action == 'requested' || github.event.action == 'in_progress' }}
         with:
           script: |
             const head_sha = context.payload.workflow_run.head_sha;
@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Update check result
         uses: actions/github-script@v6
-        if: ${{ context.payload.action == 'completed' }}
+        if: ${{ github.event.action == 'completed' }}
         with:
           script: |
             // Update the check run
