@@ -14,7 +14,7 @@ jobs:
           script: |
             const head_sha = context.workflow_run.head_sha;
             const runId = context.workflow_run.id;
-            switch (github.context.payload.action) {
+            switch (context.payload.action) {
               case "requested":
               case "in_progress":
                 // Create a check run
@@ -31,13 +31,13 @@ jobs:
                 break;
               case "completed":
                 // Update the check run
-                await github.checks.update({
-                  ...context.repo
+                await github.rest.checks.update({
+                  ...context.repo,
                   check_run_id: runId,
                   status: "completed",
                   conclusion: github.event.workflow_run.conclusion,
                 });
                 break;
               default:
-                throw new Error(`Unknown action: ${github.context.payload.action}`);
+                throw new Error(`Unknown action: ${context.payload.action}`);
             }
