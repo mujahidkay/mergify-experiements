@@ -44,15 +44,16 @@ jobs:
               check_name: "integration-test-result",
             })
             core.debug(`integration-test-result check runs: ${JSON.stringify(runs, null, 2)}`);
-            const checkId = runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at))[0];
+            const descRuns = runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+            const latestRun = descRuns[0];
 
-            if (!checkId) {
+            if (!latestRun) {
               core.setFailed(`No integration-test-result check found for commit ${head_sha}`);
               return;
             }
             await github.rest.checks.update({
               ...context.repo,
-              check_run_id: checkId,
+              check_run_id: latestRun.id,
               status: "completed",
               conclusion: context.payload.workflow_run.conclusion,
             });
