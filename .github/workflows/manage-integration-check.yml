@@ -51,7 +51,7 @@ jobs:
               return;
             }
             await github.checks.update({
-              ...context.repo
+              ...context.repo,
               check_run_id: checkId,
               status: "completed",
               conclusion: context.payload.workflow_run.conclusion,
