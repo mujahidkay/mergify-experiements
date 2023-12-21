@@ -24,7 +24,7 @@ jobs:
               status: "in_progress",
               output: {
                 title: "Integration Test Aggregate Result",
-                summary: `Synthetic check capturing the result of the <a href="${context.workflow_run.html_url}">integration-test workflow run</a>`,
+                summary: `Synthetic check capturing the result of the <a href="${context.payload.workflow_run.html_url}">integration-test workflow run</a>`,
               }
             });
             return check.data.id;
