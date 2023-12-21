@@ -50,7 +50,7 @@ jobs:
               core.setFailed(`No integration-test-result check found for commit ${head_sha}`);
               return;
             }
-            await github.checks.update({
+            await github.rest.checks.update({
               ...context.repo,
               check_run_id: checkId,
               status: "completed",
