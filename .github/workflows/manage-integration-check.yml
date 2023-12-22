@@ -37,6 +37,7 @@ jobs:
         with:
           script: |
             // Update the check run
+            const currentWorkflowRunUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             const head_sha = context.payload.workflow_run.head_sha;
             const runs = await github.paginate(github.rest.checks.listForRef, {
               ...context.repo,
@@ -44,13 +45,20 @@ jobs:
               check_name: "integration-test-result",
             })
             core.debug(`integration-test-result check runs: ${JSON.stringify(runs, null, 2)}`);
-            const descRuns = runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
-            const latestRun = descRuns[0];
-
-            if (!latestRun) {
+            if (!runs.length) {
               core.setFailed(`No integration-test-result check found for commit ${head_sha}`);
               return;
             }
+
+            const filtRuns = runs.filter(run => !run.output.summary || !run.output.summary.includes(currentWorkflowRunUrl));
+            if (!filtRuns.length) {
+              core.setFailed(`No integration-test-result check for commit ${head_sha} unattached or attached to ${currentWorkflowRunUrl}`);
+              return;
+            }
+
+            const descRuns = filtRuns.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+            const latestRun = descRuns[0];
+
             await github.rest.checks.update({
               ...context.repo,
               check_run_id: latestRun.id,
