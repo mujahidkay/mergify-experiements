@@ -16,12 +16,14 @@ jobs:
         if: ${{ github.event.action == 'requested' || github.event.action == 'in_progress' }}
         with:
           script: |
+            const external_id = context.payload.workflow_run.html_url;
             const head_sha = context.payload.workflow_run.head_sha;
             const check = await github.rest.checks.create({
               ...context.repo,
               head_sha,
               name: "integration-test-result",
               status: "in_progress",
+              external_id,
               output: {
                 title: "Integration Test Aggregate Result",
                 summary: `Synthetic check capturing the result of the <a href="${context.payload.workflow_run.html_url}">integration-test workflow run</a>`,
@@ -35,9 +37,10 @@ jobs:
         uses: actions/github-script@v6
         if: ${{ github.event.action == 'completed' }}
         with:
+          result-encoding: string
           script: |
             // Update the check run
-            const currentWorkflowRunUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const external_id = context.payload.workflow_run.html_url;
             const head_sha = context.payload.workflow_run.head_sha;
             const runs = await github.paginate(github.rest.checks.listForRef, {
               ...context.repo,
@@ -45,23 +48,29 @@ jobs:
               check_name: "integration-test-result",
             })
             core.debug(`integration-test-result check runs: ${JSON.stringify(runs, null, 2)}`);
-            if (!runs.length) {
-              core.setFailed(`No integration-test-result check found for commit ${head_sha}`);
+            const descRuns = runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+            const run = descRuns[0];
+
+            if (!run) {
+              core.setFailed(`No integration-test-result check found for commit ${head_sha} ${external_id}`);
               return;
             }
 
-            const filtRuns = runs.filter(run => !run.output.summary || !run.output.summary.includes(currentWorkflowRunUrl));
-            if (!filtRuns.length) {
-              core.setFailed(`No integration-test-result check for commit ${head_sha} unattached or attached to ${currentWorkflowRunUrl}`);
+            console.log('Latest integration-test-result check run:', run.html_url)
+            if (run.status === 'completed') {
+              core.setFailed(`Latest integration-test-result check status is already completed`);
               return;
             }
 
-            const descRuns = filtRuns.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
-            const latestRun = descRuns[0];
+            if (run.external_id !== external_id) {
+              core.setFailed(`Latest integration-test-result check found attached to workflow run: ${run.external_id}`);
+              return;
+            }
 
             await github.rest.checks.update({
               ...context.repo,
-              check_run_id: latestRun.id,
+              check_run_id: run.id,
               status: "completed",
               conclusion: context.payload.workflow_run.conclusion,
             });
+            return run.id
