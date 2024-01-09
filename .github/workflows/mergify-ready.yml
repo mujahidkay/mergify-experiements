@@ -53,6 +53,9 @@ jobs:
       - shell: bash
         run: |
           printenv
+          echo <<\EOF
+            ${{ toJson(github.event) }}
+          EOF
           merge_commits=$(git rev-list --merges "origin/$GITHUB_BASE_REF".."$GITHUB_SHA")
 
           if [ -n "$merge_commits" ]; then
