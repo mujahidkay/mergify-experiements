@@ -75,11 +75,6 @@ jobs:
             }
 
             console.log('Latest integration-test-result check run:', run.html_url)
-            if (run.status === 'completed') {
-              core.setFailed(`Latest integration-test-result check status is already completed`);
-              return;
-            }
-
             await github.rest.checks.update({
               ...context.repo,
               check_run_id: run.id,
