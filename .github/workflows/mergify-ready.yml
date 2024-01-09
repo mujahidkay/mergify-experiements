@@ -52,7 +52,7 @@ jobs:
           fetch-depth: 0
       - shell: bash
         run: |
-          merge_commits=$(git rev-list --merges "origin/$GITHUB_BASE_REF".."$GITHUB_HEAD_SHA")
+          merge_commits=$(git rev-list --merges "origin/$GITHUB_BASE_REF".."$GITHUB_SHA")
 
           if [ -n "$merge_commits" ]; then
             echo "Error: merge commits found in $GITHUB_BASE_REF..$GITHUB_HEAD_REF"
@@ -65,7 +65,7 @@ jobs:
           fi
 
           fixup_commits=
-          for commit in $(git rev-list $GITHUB_BASE_REF..$GITHUB_HEAD_SHA); do
+          for commit in $(git rev-list $GITHUB_BASE_REF..$GITHUB_SHA); do
             case $(git show --pretty=format:%s -s $commit) in fixup\!*|squash\!*)
               fixup_commits="$fixup_commits\n$commit"
               ;;
