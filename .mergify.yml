@@ -4,7 +4,7 @@ queue_rules:
     commit_message_template: |-
       {{ title }} (#{{ number }})
 
-      {{ body }}
+      {{ body | trim }}
     queue_conditions:
       - base=main
       # Require integration tests before merging only
