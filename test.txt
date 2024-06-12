@@ -1,1 +1,1 @@
-Do not Tickle PR
+HTML comments in commit message PR
