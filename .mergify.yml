@@ -1,64 +1,141 @@
 # Linear queue for the main branch.
-queue_rules:
-  - name: high_priority_main
-    commit_message_template: |-
+shared:
+    commit_message_template: &commit-message-template |-
       {{ title }} (#{{ number }})
 
       {{ body | trim }}
-    queue_conditions:
+    queue_conditions: &queue-conditions
       - base=main
+      - or:
+          - check-pending=integration-test-result
+          - check-success=integration-test-result
+          - label=bypass:integration
+    high_priority_queue_conditions: &high-priority-queue-conditions
+      - and: *queue-conditions
       - label=priority:high
-      - or:
-          - check-pending=integration-test-result
-          - check-success=integration-test-result
-          - label=bypass:integration
-    merge_conditions:
+    merge_conditions: &merge-conditions
       - base=main
+      # Rebase PRs with fixup commits are allowed to enter the merge queue but 
+      # should not be allowed to merge if there are leftover fixup commits after rebase
+      - or:
+          - label=bypass:linear-history
+          - check-success=no-fixup-commits
+          - check-skipped=no-fixup-commits
       # Require integration tests before merging only
       - or:
           - label=bypass:integration
           - check-success=integration-test-result
-  - name: main
-    commit_message_template: |-
-      {{ title }} (#{{ number }})
-
-      {{ body | trim }}
-    queue_conditions:
-      - base=main
-      - or:
-          - check-pending=integration-test-result
-          - check-success=integration-test-result
-          - label=bypass:integration
-    merge_conditions:
-      - base=main
-      # Require integration tests before merging only
-      - or:
-          - label=bypass:integration
-          - check-success=integration-test-result
-
-pull_request_rules:
-  - name: merge to main
-    conditions:
+    pr_queue_merge_conditions: &pr-queue-merge-conditions
       - base=main
       - label=automerge:no-update
       - or:
           - '#commits-behind=0'
           - label=bypass:linear-history
+    pr_queue_rebase_conditions: &pr-queue-rebase-conditions
+      - base=main
+      - label=automerge:rebase
+      - or:
+          - '#commits-behind>0'
+          - linear-history
+    pr_queue_squash_conditions: &pr-queue-squash-conditions
+      - base=main
+      - label=automerge:squash
+
+queue_rules:
+  - name: high_priority_rebase
+    commit_message_template: *commit-message-template
+    queue_conditions: *high-priority-queue-conditions
+    merge_conditions: *merge-conditions
+    merge_method: merge
+    update_method: rebase
+
+  - name: high_priority_merge
+    commit_message_template: *commit-message-template
+    queue_conditions: *high-priority-queue-conditions
+    merge_conditions: *merge-conditions
+    disallow_checks_interruption_from_queues:
+      - high_priority_rebase
+    merge_method: merge
+
+  - name: high_priority_squash
+    commit_message_template: *commit-message-template
+    queue_conditions: *high-priority-queue-conditions
+    merge_conditions: *merge-conditions
+    disallow_checks_interruption_from_queues:
+      - high_priority_rebase
+      - high_priority_merge
+    merge_method: squash
+
+  - name: rebase
+    commit_message_template: *commit-message-template
+    queue_conditions: *queue-conditions
+    merge_conditions: *merge-conditions
+    merge_method: merge
+    update_method: rebase
+
+  - name: merge
+    commit_message_template: *commit-message-template
+    queue_conditions: *queue-conditions
+    merge_conditions: *merge-conditions
+    disallow_checks_interruption_from_queues:
+      - rebase
+    merge_method: merge
+
+  - name: squash
+    commit_message_template: *commit-message-template
+    queue_conditions: *queue-conditions
+    merge_conditions: *merge-conditions
+    disallow_checks_interruption_from_queues:
+      - rebase
+      - merge
+    merge_method: squash
+
+pull_request_rules:
+  - name:  high priority - merge to main
+    conditions:
+      - and: *pr-queue-merge-conditions
+      - label=priority:high
     actions:
       queue:
-        merge_method: merge
+        name: high_priority_merge
+  - name: high priority - rebase updates then merge to main
+    conditions:
+      - and: *pr-queue-rebase-conditions
+      - label=priority:high
+    actions:
+      queue:
+        name: high_priority_rebase
+  - name: high priority - squash to main
+    conditions:
+      - and: *pr-queue-squash-conditions
+      - label=priority:high
+    actions:
+      queue:
+        name: high_priority_squash
+  - name: merge to main
+    conditions: *pr-queue-merge-conditions
+    actions:
+      queue:
+        name: merge
   - name: rebase updates then merge to main
+    conditions: *pr-queue-rebase-conditions
+    actions:
+      queue:
+        name: rebase
+  - name: squash to main
+    conditions: *pr-queue-squash-conditions
+    actions:
+      queue:
+        name: squash
+  - name: rebase and autosquash
     conditions:
       - base=main
       - label=automerge:rebase
+      - '#commits-behind=0'
+      - or:
+        - -linear-history
+        - check-failure=no-fixup-commits
+      - -draft
     actions:
-      queue:
-        merge_method: merge
-        update_method: rebase
-  - name: squash to main
-    conditions:
-      - base=main
-      - label=automerge:squash
-    actions:
-      queue:
-        merge_method: squash
+      rebase:
+        autosquash: true
