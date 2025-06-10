@@ -1,5 +1,5 @@
 name: Protobuf
-# Protobuf runs protobuf related CI checks:
+# Protobuf runs protobuf related CI checkss:
 # - buf (https://buf.build/) lint
 # - buf check-breakage
 # - check protobuf definitions are up-to-date
