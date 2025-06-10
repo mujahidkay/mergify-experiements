@@ -33,7 +33,6 @@ jobs:
             echo "Unexpected breakage detected."
           fi
           exit $status
-        working-directory: golang/cosmos
         env:
           REPO: https://github.com/${{ github.repository }}.git
           BRANCH: ${{ github.base_ref}}
