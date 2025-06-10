@@ -19,7 +19,7 @@ jobs:
           submodules: 'true'
       - name: check-breakage
         run: |
-          status=0
+          status=1
           if [ $status -eq 0 ]; then
             if [ "$EXPECT_BREAKAGE" = "true" ]; then
               echo "Expected breakage, but got no breakage."
