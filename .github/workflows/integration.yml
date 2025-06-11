@@ -136,3 +136,17 @@ jobs:
             if (conclusion === 'failure') {
               core.setFailed('Integration tests failed')
             }
+
+  post-integration:
+    uses: ./.github/workflows/result.yml
+    if: (success() || failure())
+    secrets:
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+    with:
+      dry-run: ${{ github.event_name == 'pull_request' }}
+      needs-json: ${{ toJSON(needs) }}
+    needs:
+      - pre_check
+      - matrix-test
+      - standalone-test
+      - finalize-integration-result
