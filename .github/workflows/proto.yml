@@ -19,7 +19,7 @@ jobs:
           submodules: 'true'
       - name: check-breakage
         run: |
-          status=1
+          status=0
           if [ $status -eq 0 ]; then
             if [ "$EXPECT_BREAKAGE" = "true" ]; then
               echo "Expected breakage, but got no breakage."
@@ -37,3 +37,14 @@ jobs:
           REPO: https://github.com/${{ github.repository }}.git
           BRANCH: ${{ github.base_ref}}
           EXPECT_BREAKAGE: ${{ contains( github.event.pull_request.labels.*.name, 'proto:expect-breakage') }}
+
+  post-proto:
+    uses: ./.github/workflows/result.yml
+    if: (success() || failure())
+    secrets:
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+    with:
+      dry-run: ${{ github.event_name == 'pull_request' }}
+      needs-json: ${{ toJson(needs) }}
+    needs:
+      - breakage

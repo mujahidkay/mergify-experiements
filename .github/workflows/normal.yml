@@ -37,3 +37,14 @@ jobs:
         run: |
           sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 15 }}
           exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
+
+  post-normal:
+    uses: ./.github/workflows/result.yml
+    if: (success() || failure())
+    secrets:
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+    with:
+      dry-run: ${{ github.event_name == 'pull_request' }}
+      needs-json: ${{ toJson(needs) }}
+    needs:
+      - normal-test
