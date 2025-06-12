@@ -36,8 +36,7 @@ jobs:
       - name: run normal test
         run: |
           sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 15 }}
-          # exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
-          exit 1 # forced failure
+          exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
 
   post-normal:
     uses: ./.github/workflows/result.yml
