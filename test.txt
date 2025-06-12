@@ -1,4 +1,4 @@
-HHigh priority PR merge
+hHHigh priority PR merge
 
 Consolidating merge queue conditions.
 HTML comments in commit message PR
